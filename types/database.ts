@@ -13,16 +13,27 @@ export type CalendarEventType =
   | "current-affairs"
   | "break";
 
+export type UserTier =
+  | "free"
+  | "foundation"
+  | "prelims"
+  | "mains"
+  | "optional"
+  | "all-access";
+
 export type ProfileRow = {
   id: string;
   email: string;
   full_name: string;
   role: UserRole;
+  tier: UserTier;
   avatar_url: string | null;
+  phone: string | null;
+  target_exam: string | null;
+  target_year: number | null;
   created_at: string;
   updated_at: string;
-}
-
+};
 export type CourseRow = {
   id: string;
   title: string;
@@ -32,12 +43,12 @@ export type CourseRow = {
   price: number;
   category: CourseCategory;
   level: CourseLevel;
+  required_tier: UserTier;
   instructor_id: string | null;
   is_published: boolean;
   created_at: string;
   updated_at: string;
-}
-
+};
 export type ModuleRow = {
   id: string;
   course_id: string;
@@ -45,8 +56,7 @@ export type ModuleRow = {
   description: string | null;
   order_index: number;
   created_at: string;
-}
-
+};
 export type LessonRow = {
   id: string;
   module_id: string;
@@ -62,15 +72,13 @@ export type LessonRow = {
   is_free_preview: boolean;
   order_index: number;
   created_at: string;
-}
-
+};
 export type EnrollmentRow = {
   id: string;
   user_id: string;
   course_id: string;
   enrolled_at: string;
-}
-
+};
 export type LessonProgressRow = {
   id: string;
   user_id: string;
@@ -78,8 +86,7 @@ export type LessonProgressRow = {
   completed: boolean;
   watched_seconds: number;
   updated_at: string;
-}
-
+};
 export type UserGamificationRow = {
   user_id: string;
   xp: number;
@@ -93,8 +100,7 @@ export type UserGamificationRow = {
   unlocked_badges: string[];
   created_at: string;
   updated_at: string;
-}
-
+};
 export type CalendarEventRow = {
   id: string;
   user_id: string;
@@ -108,8 +114,7 @@ export type CalendarEventRow = {
   ai_generated: boolean;
   created_at: string;
   updated_at: string;
-}
-
+};
 /** Server-generated columns are optional on insert. */
 type Generated = "id" | "created_at" | "updated_at";
 
@@ -158,6 +163,18 @@ export type Database = {
           p_minutes?: number;
         };
         Returns: UserGamificationRow;
+      };
+      replace_ai_calendar_plan: {
+        Args: { p_events: Json };
+        Returns: CalendarEventRow[];
+      };
+      is_admin: {
+        Args: { uid?: string };
+        Returns: boolean;
+      };
+      is_instructor: {
+        Args: { uid?: string };
+        Returns: boolean;
       };
     };
     Enums: {

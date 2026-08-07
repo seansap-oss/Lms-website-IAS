@@ -169,6 +169,27 @@ export async function replaceAiPlan(
   if (mode === "supabase" && userId) {
     const supabase = createClient();
     if (supabase) {
+      // Preferred path: single atomic RPC (delete + insert in one transaction).
+      const payload = generated.map((e) => ({
+        title: e.title,
+        description: e.description ?? "",
+        start_time: e.start,
+        end_time: e.end,
+        type: e.category,
+        subject: e.subject ?? "",
+        completed: Boolean(e.completed),
+      }));
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "replace_ai_calendar_plan",
+        { p_events: payload }
+      );
+
+      if (!rpcError && Array.isArray(rpcData)) {
+        return [...manual, ...rpcData.map((r) => rowToEvent(r as CalendarEventRow))];
+      }
+
+      // Fallback: manual delete + chunked insert (RPC not yet installed).
       await supabase
         .from("calendar_events")
         .delete()
@@ -178,7 +199,6 @@ export async function replaceAiPlan(
       const rows = generated.map((e) => eventToRow({ ...e, aiGenerated: true }, userId));
       const inserted: CalendarEvent[] = [];
 
-      // Chunked insert keeps the payload under Supabase limits for long plans.
       for (let i = 0; i < rows.length; i += 200) {
         const { data } = await supabase
           .from("calendar_events")

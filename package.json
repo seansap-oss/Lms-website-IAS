@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "assets": "node scripts/generate-assets.mjs",
+    "env:sync": "node scripts/sync-vercel-env.mjs",
+    "env:pull": "vercel env pull .env.local",
     "build:static": "cross-env BUILD_TARGET=capacitor next build",
     "cap:add": "cap add android",
     "cap:sync": "cap sync android",
