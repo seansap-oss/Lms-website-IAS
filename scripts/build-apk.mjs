@@ -12,6 +12,10 @@ const log = (m) => console.log(`\n\u001b[36m▶ ${m}\u001b[0m`);
 const ok = (m) => console.log(`\u001b[32m✓ ${m}\u001b[0m`);
 const warn = (m) => console.log(`\u001b[33m! ${m}\u001b[0m`);
 
+const IS_RELEASE = process.argv.includes("--release");
+const WANT_BUNDLE = process.argv.includes("--bundle") || IS_RELEASE;
+const VARIANT = IS_RELEASE ? "release" : "debug";
+
 function run(cmd, opts = {}) {
   execSync(cmd, { cwd: root, stdio: "inherit", ...opts });
 }
@@ -63,6 +67,10 @@ if (!existsSync(ANDROID)) {
 log("Syncing web assets into Android project");
 run("npx cap sync android");
 ok("Capacitor sync complete");
+
+// 3b. Inject release signing configuration (idempotent)
+log("Configuring Gradle signing");
+run("node scripts/configure-signing.mjs");
 
 // 4. Gradle assembleDebug
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew";
@@ -124,13 +132,46 @@ if (sdk) {
   warn("Android SDK not found — Gradle may fail. Install via Android Studio SDK Manager.");
 }
 
-log("Compiling debug APK via Gradle");
-const built = tryRun(`${gradlew} assembleDebug --no-daemon`, { cwd: ANDROID, env: gradleEnv });
+// Warn early if a release build has no keystore
+const keystoreProps = join(ANDROID, "keystore.properties");
+const hasEnvKeystore =
+  process.env.ANDROID_KEYSTORE_PATH && process.env.ANDROID_KEYSTORE_PASSWORD;
 
-const apk = join(ANDROID, "app", "build", "outputs", "apk", "debug", "app-debug.apk");
+if (IS_RELEASE && !existsSync(keystoreProps) && !hasEnvKeystore) {
+  warn("No android/keystore.properties and no ANDROID_KEYSTORE_* env vars found.");
+  warn("The release artifact will be signed with the DEBUG key and CANNOT reach Google Play.");
+  warn("Follow SIGNING_INSTRUCTIONS.md to create upload-keystore.jks first.");
+}
+
+const gradleTask = IS_RELEASE ? "assembleRelease" : "assembleDebug";
+log(`Compiling ${VARIANT} APK via Gradle (${gradleTask})`);
+const built = tryRun(`${gradlew} ${gradleTask} --no-daemon`, { cwd: ANDROID, env: gradleEnv });
+
+const apkName = IS_RELEASE ? "app-release.apk" : "app-debug.apk";
+const apk = join(ANDROID, "app", "build", "outputs", "apk", VARIANT, apkName);
+const apkUnsigned = join(ANDROID, "app", "build", "outputs", "apk", VARIANT, "app-release-unsigned.apk");
+
 if (built && existsSync(apk)) {
   ok(`APK built: ${apk}`);
+} else if (built && existsSync(apkUnsigned)) {
+  warn(`Unsigned APK produced: ${apkUnsigned}`);
+  warn("Configure a keystore (SIGNING_INSTRUCTIONS.md) to get a signed artifact.");
 } else {
   warn("Gradle build did not complete. Ensure Android SDK + JDK 17 are installed.");
-  warn(`Manual: cd android && ${gradlew} assembleDebug`);
+  warn(`Manual: cd android && ${gradlew} ${gradleTask}`);
+}
+
+// 5. Android App Bundle (.aab) — the format Google Play requires
+if (WANT_BUNDLE && built) {
+  log("Building Android App Bundle (.aab) for Play Store upload");
+  const bundleTask = IS_RELEASE ? "bundleRelease" : "bundleDebug";
+  const bundled = tryRun(`${gradlew} ${bundleTask} --no-daemon`, { cwd: ANDROID, env: gradleEnv });
+  const aab = join(ANDROID, "app", "build", "outputs", "bundle", VARIANT, `app-${VARIANT}.aab`);
+
+  if (bundled && existsSync(aab)) {
+    ok(`AAB built: ${aab}`);
+    ok("Upload this .aab file at https://play.google.com/console");
+  } else {
+    warn("Bundle task did not produce an .aab. Check the Gradle output above.");
+  }
 }

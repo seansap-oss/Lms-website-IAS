@@ -40,7 +40,14 @@ import { WeekView } from "@/components/calendar/week-view";
 import { YearView } from "@/components/calendar/year-view";
 import { ListView } from "@/components/calendar/list-view";
 import { AiPlanDialog } from "@/components/calendar/ai-plan-dialog";
-import { buildSeedEvents } from "@/lib/calendar-data";
+import {
+  loadEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  replaceAiPlan,
+  type CalendarMode,
+} from "@/lib/supabase/calendar-store";
 import { CATEGORY_META, type CalendarEvent, type CalendarView } from "@/types/calendar";
 import { hapticSuccess } from "@/lib/native";
 
@@ -61,9 +68,23 @@ export default function CalendarPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [planBanner, setPlanBanner] = React.useState<{ title: string; strategy: string; servedBy: string } | null>(null);
   const [detail, setDetail] = React.useState<CalendarEvent | null>(null);
+  const [mode, setMode] = React.useState<CalendarMode>("local");
+  const [userId, setUserId] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setEvents(buildSeedEvents(new Date()));
+    let alive = true;
+    (async () => {
+      const { events: loaded, mode: m, userId: uid } = await loadEvents();
+      if (!alive) return;
+      setEvents(loaded);
+      setMode(m);
+      setUserId(uid);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const goToList = () => {
@@ -127,31 +148,68 @@ export default function CalendarPage() {
     return format(cursor, "MMMM yyyy");
   }, [view, cursor, scopeLabel]);
 
-  const toggleComplete = (id: string) =>
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, completed: !e.completed } : e)));
+  const toggleComplete = React.useCallback(
+    (id: string) => {
+      setEvents((prev) => {
+        const next = prev.map((e) => (e.id === id ? { ...e, completed: !e.completed } : e));
+        const target = next.find((e) => e.id === id);
+        if (target) void updateEvent(id, { completed: target.completed }, mode, next);
+        return next;
+      });
+    },
+    [mode]
+  );
 
-  const addQuickEvent = (date: Date, hour: number) => {
-    const start = set(date, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 });
-    const newEvent: CalendarEvent = {
-      id: `manual-${Date.now()}`,
-      title: "New Study Block",
-      category: "study",
-      start: formatISO(start),
-      end: formatISO(set(date, { hours: hour + 1, minutes: 0, seconds: 0, milliseconds: 0 })),
-      completed: false,
-    };
-    setEvents((prev) => [...prev, newEvent]);
-    setDetail(newEvent);
-  };
+  const addQuickEvent = React.useCallback(
+    async (date: Date, hour: number) => {
+      const safeHour = Math.min(23, Math.max(0, hour));
+      const start = set(date, { hours: safeHour, minutes: 0, seconds: 0, milliseconds: 0 });
+      const draft: CalendarEvent = {
+        id: `manual-${Date.now()}`,
+        title: "New Study Block",
+        category: "study",
+        start: formatISO(start),
+        end: formatISO(
+          set(date, { hours: Math.min(23, safeHour + 1), minutes: safeHour >= 23 ? 59 : 0, seconds: 0, milliseconds: 0 })
+        ),
+        completed: false,
+      };
 
-  const handleGenerated = (
-    generated: CalendarEvent[],
-    meta: { title: string; strategy: string; servedBy: string }
-  ) => {
-    setEvents((prev) => [...prev.filter((e) => !e.aiGenerated), ...generated]);
-    setPlanBanner(meta);
-    hapticSuccess();
-  };
+      setEvents((prev) => [...prev, draft]);
+      setDetail(draft);
+
+      const saved = await createEvent(draft, mode, userId, events);
+      if (saved.id !== draft.id) {
+        setEvents((prev) => prev.map((e) => (e.id === draft.id ? saved : e)));
+        setDetail((d) => (d?.id === draft.id ? saved : d));
+      }
+    },
+    [mode, userId, events]
+  );
+
+  const removeEvent = React.useCallback(
+    (id: string) => {
+      setEvents((prev) => {
+        const next = prev.filter((e) => e.id !== id);
+        void deleteEvent(id, mode, prev);
+        return next;
+      });
+      setDetail(null);
+    },
+    [mode]
+  );
+
+  const handleGenerated = React.useCallback(
+    async (generated: CalendarEvent[], meta: { title: string; strategy: string; servedBy: string }) => {
+      setEvents((prev) => [...prev.filter((e) => !e.aiGenerated), ...generated]);
+      setPlanBanner(meta);
+      hapticSuccess();
+
+      const persisted = await replaceAiPlan(generated, mode, userId, events);
+      setEvents(persisted);
+    },
+    [mode, userId, events]
+  );
 
   const upcoming = React.useMemo(
     () =>
@@ -170,7 +228,15 @@ export default function CalendarPage() {
             <Link href="/dashboard" className="p-1.5 -ml-1.5 rounded-lg hover:bg-muted transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            <h1 className="font-semibold flex-1">Study Calendar</h1>
+            <h1 className="font-semibold flex-1 flex items-center gap-2">
+              Study Calendar
+              <Badge
+                variant={mode === "supabase" ? "success" : "outline"}
+                className="text-[10px] font-normal hidden sm:inline-flex"
+              >
+                {loading ? "Syncing…" : mode === "supabase" ? "Cloud synced" : "Local"}
+              </Badge>
+            </h1>
             <Button size="sm" onClick={() => setDialogOpen(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
               <Sparkles className="h-3.5 w-3.5 sm:mr-1.5" />
               <span className="hidden sm:inline">AI Study Plan</span>
@@ -392,10 +458,7 @@ export default function CalendarPage() {
                     size="sm"
                     variant="outline"
                     className="text-destructive"
-                    onClick={() => {
-                      setEvents((prev) => prev.filter((e) => e.id !== detail.id));
-                      setDetail(null);
-                    }}
+                    onClick={() => removeEvent(detail.id)}
                   >
                     Delete
                   </Button>

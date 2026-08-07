@@ -43,6 +43,19 @@ export interface GamificationState {
   unlockedBadges: string[];
 }
 
+/** Zero-state used for a freshly created (or signed-out) profile. */
+export const EMPTY_STATE: GamificationState = {
+  xp: 0,
+  streakDays: 0,
+  lessonsCompleted: 0,
+  essaysSubmitted: 0,
+  quizzesCompleted: 0,
+  totalStudyMinutes: 0,
+  lastLoginDate: "",
+  unlockedBadges: [],
+};
+
+/** Demo values shown only when Supabase is not yet provisioned. */
 export const DEFAULT_STATE: GamificationState = {
   xp: 1240,
   streakDays: 47,
@@ -53,6 +66,29 @@ export const DEFAULT_STATE: GamificationState = {
   lastLoginDate: "",
   unlockedBadges: [],
 };
+
+/** Maps a Supabase `user_gamification` row into client state. */
+export function rowToState(row: {
+  xp: number;
+  streak_days: number;
+  lessons_completed: number;
+  essays_submitted: number;
+  quizzes_completed: number;
+  total_study_minutes: number;
+  last_login_date: string | null;
+  unlocked_badges: string[] | null;
+}): GamificationState {
+  return {
+    xp: row.xp ?? 0,
+    streakDays: row.streak_days ?? 0,
+    lessonsCompleted: row.lessons_completed ?? 0,
+    essaysSubmitted: row.essays_submitted ?? 0,
+    quizzesCompleted: row.quizzes_completed ?? 0,
+    totalStudyMinutes: row.total_study_minutes ?? 0,
+    lastLoginDate: row.last_login_date ?? "",
+    unlockedBadges: row.unlocked_badges ?? [],
+  };
+}
 
 export const BADGES: Badge[] = [
   {

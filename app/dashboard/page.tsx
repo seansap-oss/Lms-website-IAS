@@ -26,19 +26,62 @@ import { BadgesCard } from "@/components/dashboard/badges-card";
 import { QuoteCard } from "@/components/dashboard/quote-card";
 import { courses, sampleLessons } from "@/lib/mock-data";
 import { DEFAULT_STATE, type GamificationState } from "@/lib/gamification";
+import {
+  loadGamification,
+  awardXp,
+  registerDailyLogin,
+  type PersistenceMode,
+} from "@/lib/supabase/gamification-store";
 import Link from "next/link";
 
 const enrolledCourses = courses.slice(0, 3);
 
 export default function DashboardPage() {
   const [game, setGame] = React.useState<GamificationState>(DEFAULT_STATE);
+  const [mode, setMode] = React.useState<PersistenceMode>("local");
   const [xpToast, setXpToast] = React.useState<number | null>(null);
+  const pendingRef = React.useRef(0);
+  const flushTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const addXp = React.useCallback((amount: number) => {
-    setGame((g) => ({ ...g, xp: g.xp + amount }));
-    setXpToast(amount);
-    setTimeout(() => setXpToast(null), 1800);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { state, mode: m } = await loadGamification();
+      if (!alive) return;
+      setMode(m);
+      const withLogin = await registerDailyLogin(state, m);
+      if (alive) setGame(withLogin);
+    })();
+    return () => {
+      alive = false;
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+    };
   }, []);
+
+  // Optimistic UI + debounced persistence so per-minute XP ticks
+  // do not generate one network round-trip each.
+  const addXp = React.useCallback(
+    (amount: number) => {
+      setGame((g) => ({ ...g, xp: g.xp + amount }));
+      setXpToast(amount);
+      setTimeout(() => setXpToast(null), 1800);
+
+      pendingRef.current += amount;
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+      flushTimer.current = setTimeout(async () => {
+        const batched = pendingRef.current;
+        pendingRef.current = 0;
+        if (!batched) return;
+        setGame((current) => {
+          void awardXp(current, { xp: 0, minutes: Math.round(batched / 2) }, mode).then(
+            (persisted) => setGame(persisted)
+          );
+          return current;
+        });
+      }, 5000);
+    },
+    [mode]
+  );
 
   const overallProgress = Math.round((game.lessonsCompleted / (sampleLessons.length * 5)) * 100);
   const studyHours = Math.round(game.totalStudyMinutes / 60);
