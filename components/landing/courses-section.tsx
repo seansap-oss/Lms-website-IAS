@@ -8,12 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { courses } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import {
+  UpiCheckoutModal,
+  type CheckoutCourse,
+} from "@/components/checkout/upi-checkout-modal";
 import Link from "next/link";
 
 const categories = ["all", "foundation", "prelims", "mains", "optional", "test-series"];
 
 export function CoursesSection() {
   const [activeFilter, setActiveFilter] = React.useState("all");
+  const [checkout, setCheckout] = React.useState<CheckoutCourse | null>(null);
 
   const filteredCourses = activeFilter === "all"
     ? courses
@@ -93,11 +98,21 @@ export function CoursesSection() {
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
                     {course.description}
                   </p>
-                  <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="flex items-center justify-between pt-4 border-t gap-2">
                     <span className="text-xl font-bold text-primary">{formatCurrency(course.price)}</span>
-                    <Link href={`/learn/${course.slug}`}>
-                      <Button size="sm">View Details</Button>
-                    </Link>
+                    <div className="flex gap-1.5">
+                      <Link href={`/learn/${course.slug}`}>
+                        <Button size="sm" variant="outline">Preview</Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setCheckout({ id: course.id, title: course.title, price: course.price })
+                        }
+                      >
+                        Enroll
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -105,6 +120,12 @@ export function CoursesSection() {
           ))}
         </div>
       </div>
+
+      <UpiCheckoutModal
+        open={checkout !== null}
+        onClose={() => setCheckout(null)}
+        course={checkout}
+      />
     </section>
   );
 }

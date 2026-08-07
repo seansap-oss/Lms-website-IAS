@@ -8,9 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { feePackages } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import {
+  UpiCheckoutModal,
+  type CheckoutCourse,
+} from "@/components/checkout/upi-checkout-modal";
 import Link from "next/link";
 
 export function PricingSection() {
+  const [checkout, setCheckout] = React.useState<CheckoutCourse | null>(null);
+
   return (
     <section id="pricing" className="relative py-24 bg-background">
       <div className="absolute inset-0 grid-overlay opacity-20" />
@@ -73,17 +79,27 @@ export function PricingSection() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/dashboard">
-                    <Button className="w-full" variant={pkg.popular ? "default" : "outline"}>
-                      Enroll Now
-                    </Button>
-                  </Link>
+                  <Button
+                    className="w-full"
+                    variant={pkg.popular ? "default" : "outline"}
+                    onClick={() =>
+                      setCheckout({ id: pkg.id, title: pkg.name, price: pkg.price })
+                    }
+                  >
+                    Enroll Now
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
       </div>
+
+      <UpiCheckoutModal
+        open={checkout !== null}
+        onClose={() => setCheckout(null)}
+        course={checkout}
+      />
     </section>
   );
 }

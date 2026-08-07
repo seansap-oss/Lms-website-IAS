@@ -2,10 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Menu, X, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLongPress } from "@/hooks/use-long-press";
+import { LocalAdminAuthModal } from "@/components/admin/local-admin-auth-modal";
+import { LONG_PRESS_MS, hasLocalAdminSession } from "@/lib/local-admin";
 
 const navLinks = [
   { href: "#courses", label: "Courses" },
@@ -16,14 +20,26 @@ const navLinks = [
 ];
 
 export function Navbar() {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const [authOpen, setAuthOpen] = React.useState(false);
 
   React.useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Stealth: hold the logo for 5 seconds to reveal the local institute console.
+  const { handlers, progress, isPressing } = useLongPress({
+    durationMs: LONG_PRESS_MS,
+    onLongPress: () => {
+      if (hasLocalAdminSession()) router.push("/local-admin");
+      else setAuthOpen(true);
+    },
+    onClick: () => router.push("/"),
+  });
 
   return (
     <motion.header
@@ -37,15 +53,40 @@ export function Navbar() {
       )}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg group-hover:shadow-blue-500/25 transition-shadow">
-            <GraduationCap className="h-6 w-6 text-white" />
+        <div
+          {...handlers}
+          role="link"
+          tabIndex={0}
+          aria-label="Ibemhal IAS home"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") router.push("/");
+          }}
+          className="relative flex items-center gap-2 group cursor-pointer select-none no-tap-highlight"
+        >
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg group-hover:shadow-blue-500/25 transition-shadow overflow-hidden">
+            <GraduationCap className="h-6 w-6 text-white relative z-10" />
+            {isPressing && (
+              <span
+                className="absolute inset-x-0 bottom-0 bg-amber-400/70 transition-[height] duration-100 ease-linear"
+                style={{ height: `${progress}%` }}
+                aria-hidden
+              />
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-bold leading-tight">Ibemhal</span>
             <span className="text-xs text-blue-600 dark:text-blue-400 font-medium -mt-0.5">IAS ACADEMY</span>
           </div>
-        </Link>
+          {isPressing && progress > 35 && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute -bottom-7 left-0 whitespace-nowrap rounded-full bg-amber-500/95 px-2.5 py-1 text-[10px] font-semibold text-white shadow-lg"
+            >
+              {progress >= 99 ? "Unlocking…" : `Hold ${Math.ceil((100 - progress) / 20)}s…`}
+            </motion.span>
+          )}
+        </div>
 
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
@@ -105,6 +146,8 @@ export function Navbar() {
           </div>
         </motion.div>
       )}
+
+      <LocalAdminAuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </motion.header>
   );
 }

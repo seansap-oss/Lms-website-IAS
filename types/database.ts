@@ -44,6 +44,11 @@ export type CourseRow = {
   category: CourseCategory;
   level: CourseLevel;
   required_tier: UserTier;
+  price_inr: number;
+  discounted_price_inr: number | null;
+  duration_months: number | null;
+  short_tagline: string | null;
+  display_order: number;
   instructor_id: string | null;
   is_published: boolean;
   created_at: string;
@@ -73,11 +78,57 @@ export type LessonRow = {
   order_index: number;
   created_at: string;
 };
+export type DiscountType = "percentage" | "flat";
+export type EnrolledVia =
+  | "upi_auto"
+  | "admin_manual"
+  | "cash_offline"
+  | "scholarship"
+  | "trial";
+export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
+
+export type DiscountCodeRow = {
+  id: string;
+  code: string;
+  description: string | null;
+  discount_type: DiscountType;
+  discount_value: number;
+  max_uses: number | null;
+  current_uses: number;
+  min_purchase_inr: number;
+  max_discount_inr: number | null;
+  applies_to_course_id: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type EnrollmentRow = {
   id: string;
   user_id: string;
   course_id: string;
   enrolled_at: string;
+  amount_paid: number;
+  discount_code_used: string | null;
+  enrolled_via: EnrolledVia;
+  upi_reference: string | null;
+  payment_status: PaymentStatus;
+  granted_by: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type SalesAnalyticsRow = {
+  total_students: number;
+  total_enrollments: number;
+  total_revenue_inr: number;
+  active_courses: number;
+  upi_enrollments: number;
+  manual_enrollments: number;
+  active_discount_codes: number;
+  revenue_this_month_inr: number;
 };
 export type LessonProgressRow = {
   id: string;
@@ -141,18 +192,18 @@ export type Database = {
       courses: Table<CourseRow>;
       modules: Table<ModuleRow>;
       lessons: Table<LessonRow>;
-      enrollments: Table<EnrollmentRow>;
+      enrollments: DefaultedTable<EnrollmentRow, "user_id" | "course_id">;
       lesson_progress: Table<LessonProgressRow>;
       user_gamification: DefaultedTable<UserGamificationRow, "user_id">;
       calendar_events: DefaultedTable<
         CalendarEventRow,
         "user_id" | "title" | "start_time" | "end_time"
       >;
+      discount_codes: DefaultedTable<DiscountCodeRow, "code">;
     };
-    Views: Record<
-      string,
-      { Row: Record<string, unknown>; Relationships: [] }
-    >;
+    Views: {
+      sales_analytics: { Row: SalesAnalyticsRow; Relationships: [] };
+    } & Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: {
       award_xp: {
         Args: {
@@ -175,6 +226,37 @@ export type Database = {
       is_instructor: {
         Args: { uid?: string };
         Returns: boolean;
+      };
+      validate_discount_code: {
+        Args: { p_code: string; p_course_id: string };
+        Returns: Json;
+      };
+      redeem_enrollment: {
+        Args: {
+          p_course_id: string;
+          p_code?: string | null;
+          p_via?: string;
+          p_reference?: string | null;
+        };
+        Returns: Json;
+      };
+      admin_grant_entitlement: {
+        Args: {
+          p_user_id: string;
+          p_course_id: string;
+          p_via?: string;
+          p_amount?: number;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      admin_revoke_entitlement: {
+        Args: { p_user_id: string; p_course_id: string };
+        Returns: Json;
+      };
+      course_effective_price: {
+        Args: { p_course_id: string };
+        Returns: number;
       };
     };
     Enums: {
