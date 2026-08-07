@@ -12,26 +12,57 @@ import {
   Calendar,
   ArrowRight,
   GraduationCap,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { StudyTimer } from "@/components/dashboard/study-timer";
+import { XpLevelCard } from "@/components/dashboard/xp-level-card";
+import { BadgesCard } from "@/components/dashboard/badges-card";
+import { QuoteCard } from "@/components/dashboard/quote-card";
 import { courses, sampleLessons } from "@/lib/mock-data";
-import { formatDuration } from "@/lib/utils";
+import { DEFAULT_STATE, type GamificationState } from "@/lib/gamification";
 import Link from "next/link";
 
 const enrolledCourses = courses.slice(0, 3);
-const streakDays = 47;
-const totalLessonsCompleted = 34;
-const totalLessons = sampleLessons.length;
 
 export default function DashboardPage() {
-  const overallProgress = Math.round((totalLessonsCompleted / totalLessons) * 100);
+  const [game, setGame] = React.useState<GamificationState>(DEFAULT_STATE);
+  const [xpToast, setXpToast] = React.useState<number | null>(null);
+
+  const addXp = React.useCallback((amount: number) => {
+    setGame((g) => ({ ...g, xp: g.xp + amount }));
+    setXpToast(amount);
+    setTimeout(() => setXpToast(null), 1800);
+  }, []);
+
+  const overallProgress = Math.round((game.lessonsCompleted / (sampleLessons.length * 5)) * 100);
+  const studyHours = Math.round(game.totalStudyMinutes / 60);
+
+  const stats = [
+    { icon: Flame, value: game.streakDays, label: "Day Streak", gradient: "from-orange-500 to-red-500" },
+    { icon: TrendingUp, value: `${overallProgress}%`, label: "Syllabus Coverage", gradient: "from-blue-500 to-indigo-500" },
+    { icon: BookOpen, value: game.lessonsCompleted, label: "Lessons Done", gradient: "from-green-500 to-emerald-500" },
+    { icon: Clock, value: `${studyHours}h`, label: "Study Time", gradient: "from-purple-500 to-pink-500" },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
+      {xpToast !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed top-20 right-6 z-[90] rounded-full bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-lg flex items-center gap-1.5"
+        >
+          <Sparkles className="h-4 w-4" />+{xpToast} XP
+        </motion.div>
+      )}
+
       <nav className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -41,6 +72,10 @@ export default function DashboardPage() {
             <span className="font-bold text-lg">Ibemhal</span>
           </Link>
           <div className="flex items-center gap-4">
+            <Badge variant="outline" className="gap-1 hidden sm:flex">
+              <Sparkles className="h-3 w-3 text-amber-500" />
+              {game.xp.toLocaleString()} XP
+            </Badge>
             <Link href="/ai-tutor" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
               AI Tutor
             </Link>
@@ -50,11 +85,7 @@ export default function DashboardPage() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">
             Welcome back, <span className="gradient-text">Student</span>
           </h1>
@@ -62,70 +93,34 @@ export default function DashboardPage() {
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="bg-gradient-to-br from-orange-500 to-red-500 border-0 text-white">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                    <Flame className="h-5 w-5" />
+          {stats.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+            >
+              <Card className={`bg-gradient-to-br ${stat.gradient} border-0 text-white`}>
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                      <stat.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-xs text-white/80">{stat.label}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">{streakDays}</p>
-                    <p className="text-xs text-white/80">Day Streak</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="bg-gradient-to-br from-blue-500 to-indigo-500 border-0 text-white">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{overallProgress}%</p>
-                    <p className="text-xs text-white/80">Syllabus Coverage</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="bg-gradient-to-br from-green-500 to-emerald-500 border-0 text-white">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                    <BookOpen className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{totalLessonsCompleted}</p>
-                    <p className="text-xs text-white/80">Lessons Done</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Card className="bg-gradient-to-br from-purple-500 to-pink-500 border-0 text-white">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">142h</p>
-                    <p className="text-xs text-white/80">Study Time</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            <XpLevelCard xp={game.xp} />
+
             <div>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <PlayCircle className="h-5 w-5 text-primary" />
@@ -142,6 +137,7 @@ export default function DashboardPage() {
                     <Card className="glass-card-hover overflow-hidden">
                       <div className="flex flex-col sm:flex-row">
                         <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-blue-500 to-purple-600 relative shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={course.thumbnail_url}
                             alt={course.title}
@@ -176,9 +172,15 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            <BadgesCard state={game} />
           </div>
 
           <div className="space-y-6">
+            <StudyTimer onXpEarned={addXp} />
+
+            <QuoteCard />
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -229,13 +231,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function Bot({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" />
-    </svg>
   );
 }

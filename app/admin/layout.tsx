@@ -10,12 +10,16 @@ import {
   LogOut,
   Menu,
   X,
+  Sparkles,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/courses", label: "Courses", icon: BookOpen },
+  { href: "/admin/ingest", label: "AI Ingestion", icon: Sparkles },
+  { href: "/admin/ai-health", label: "AI Health", icon: Activity },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
