@@ -17,6 +17,7 @@ export interface Course {
   category: "foundation" | "prelims" | "mains" | "optional" | "test-series";
   level: "beginner" | "intermediate" | "advanced";
   instructor_id?: string;
+  is_published?: boolean;
   created_at: string;
 }
 
@@ -32,7 +33,12 @@ export interface Lesson {
   id: string;
   module_id: string;
   title: string;
+  content_type: "video" | "audio" | "text";
   video_mux_id?: string;
+  audio_url?: string;
+  text_content?: string;
+  vtt_caption_url?: string;
+  transcript_text?: string;
   duration_seconds: number;
   is_free_preview: boolean;
   order_index: number;

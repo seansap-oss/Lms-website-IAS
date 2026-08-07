@@ -252,12 +252,12 @@ export const sampleModules: Module[] = [
 ];
 
 export const sampleLessons: Lesson[] = [
-  { id: "l1", module_id: "m1", title: "UPSC Exam Pattern & Syllabus Overview", video_mux_id: "demo-1", duration_seconds: 1845, is_free_preview: true, order_index: 1 },
-  { id: "l2", module_id: "m1", title: "How to Read NCERT Books Effectively", video_mux_id: "demo-2", duration_seconds: 2400, is_free_preview: true, order_index: 2 },
-  { id: "l3", module_id: "m1", title: "Making Notes: The Ibemhal Method", video_mux_id: "demo-3", duration_seconds: 1920, is_free_preview: false, order_index: 3 },
-  { id: "l4", module_id: "m2", title: "Ancient India: Indus Valley Civilization", video_mux_id: "demo-4", duration_seconds: 3100, is_free_preview: false, order_index: 1 },
-  { id: "l5", module_id: "m2", title: "Vedic Period & Mahajanapadas", video_mux_id: "demo-5", duration_seconds: 2800, is_free_preview: false, order_index: 2 },
-  { id: "l6", module_id: "m2", title: "Mauryan Empire & Ashoka", video_mux_id: "demo-6", duration_seconds: 3400, is_free_preview: false, order_index: 3 },
-  { id: "l7", module_id: "m3", title: "Historical Background of Constitution", video_mux_id: "demo-7", duration_seconds: 2200, is_free_preview: false, order_index: 1 },
-  { id: "l8", module_id: "m3", title: "Preamble & Salient Features", video_mux_id: "demo-8", duration_seconds: 1900, is_free_preview: false, order_index: 2 },
+  { id: "l1", module_id: "m1", title: "UPSC Exam Pattern & Syllabus Overview", content_type: "video", video_mux_id: "demo-1", duration_seconds: 1845, is_free_preview: true, order_index: 1, transcript_text: "[00:00] Welcome to this lesson on the UPSC Exam Pattern.\n\n[00:15] The Civil Services Examination is conducted in three stages: Prelims, Mains, and Interview.\n\n[00:30] Prelims consists of two papers: General Studies Paper I and CSAT (General Studies Paper II).\n\n[00:45] The Mains examination has nine papers including four GS papers, two optional papers, one essay, and two qualifying language papers.\n\n[01:00] The Interview carries 275 marks, making the total 2025 marks for ranking.\n\n[01:20] Let me now explain the detailed syllabus for each paper." },
+  { id: "l2", module_id: "m1", title: "How to Read NCERT Books Effectively", content_type: "video", video_mux_id: "demo-2", duration_seconds: 2400, is_free_preview: true, order_index: 2 },
+  { id: "l3", module_id: "m1", title: "Making Notes: The Ibemhal Method", content_type: "audio", audio_url: "/audio/ibemhal-method.mp3", duration_seconds: 1920, is_free_preview: false, order_index: 3 },
+  { id: "l4", module_id: "m2", title: "Ancient India: Indus Valley Civilization", content_type: "video", video_mux_id: "demo-4", duration_seconds: 3100, is_free_preview: false, order_index: 1 },
+  { id: "l5", module_id: "m2", title: "Vedic Period & Mahajanapadas", content_type: "video", video_mux_id: "demo-5", duration_seconds: 2800, is_free_preview: false, order_index: 2 },
+  { id: "l6", module_id: "m2", title: "Mauryan Empire & Ashoka", content_type: "audio", audio_url: "/audio/mauryan-empire.mp3", duration_seconds: 3400, is_free_preview: false, order_index: 3 },
+  { id: "l7", module_id: "m3", title: "Historical Background of Constitution", content_type: "video", video_mux_id: "demo-7", duration_seconds: 2200, is_free_preview: false, order_index: 1 },
+  { id: "l8", module_id: "m3", title: "Preamble & Salient Features", content_type: "text", text_content: "Detailed article about the Preamble...", duration_seconds: 1900, is_free_preview: false, order_index: 2 },
 ];

@@ -1,7 +1,6 @@
--- Ibemhal IAS LMS - Supabase PostgreSQL Schema
--- Full database schema with Row Level Security (RLS) policies
+-- Ibemhal IAS LMS - Supabase PostgreSQL Schema (Full)
+-- Complete database schema with Row Level Security (RLS) policies
 
--- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
@@ -48,14 +47,19 @@ CREATE TABLE modules (
 );
 
 -- ============================================
--- LESSONS TABLE
+-- LESSONS TABLE (with transcription support)
 -- ============================================
 CREATE TABLE lessons (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
+  content_type TEXT NOT NULL DEFAULT 'video' CHECK (content_type IN ('video', 'audio', 'text')),
   video_mux_id TEXT,
+  audio_url TEXT,
+  text_content TEXT,
+  vtt_caption_url TEXT,
+  transcript_text TEXT,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
   is_free_preview BOOLEAN DEFAULT false,
   order_index INTEGER NOT NULL DEFAULT 0,
@@ -102,7 +106,6 @@ CREATE INDEX idx_courses_slug ON courses(slug);
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================
 
--- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE modules ENABLE ROW LEVEL SECURITY;
@@ -110,93 +113,69 @@ ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lesson_progress ENABLE ROW LEVEL SECURITY;
 
--- PROFILES POLICIES
-CREATE POLICY "Users can view own profile"
-  ON profiles FOR SELECT
-  USING (auth.uid() = id);
+-- PROFILES
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admins can manage all profiles" ON profiles FOR ALL USING (
+  auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+);
 
-CREATE POLICY "Users can update own profile"
-  ON profiles FOR UPDATE
-  USING (auth.uid() = id);
+-- COURSES
+CREATE POLICY "Anyone can view published courses" ON courses FOR SELECT USING (is_published = true);
+CREATE POLICY "Instructors can manage own courses" ON courses FOR ALL USING (auth.uid() = instructor_id);
+CREATE POLICY "Admins can manage all courses" ON courses FOR ALL USING (
+  auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+);
 
-CREATE POLICY "Admins can view all profiles"
-  ON profiles FOR SELECT
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
+-- MODULES
+CREATE POLICY "Anyone can view modules of published courses" ON modules FOR SELECT USING (
+  course_id IN (SELECT id FROM courses WHERE is_published = true)
+);
+CREATE POLICY "Instructors can manage own modules" ON modules FOR ALL USING (
+  course_id IN (SELECT id FROM courses WHERE instructor_id = auth.uid())
+);
+CREATE POLICY "Admins can manage all modules" ON modules FOR ALL USING (
+  auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+);
 
--- COURSES POLICIES
-CREATE POLICY "Anyone can view published courses"
-  ON courses FOR SELECT
-  USING (is_published = true);
+-- LESSONS
+CREATE POLICY "Enrolled students can view lessons" ON lessons FOR SELECT USING (
+  module_id IN (
+    SELECT m.id FROM modules m
+    JOIN courses c ON m.course_id = c.id
+    WHERE c.is_published = true
+    OR m.course_id IN (SELECT course_id FROM enrollments WHERE user_id = auth.uid())
+  )
+);
+CREATE POLICY "Instructors can manage own lessons" ON lessons FOR ALL USING (
+  module_id IN (
+    SELECT m.id FROM modules m
+    JOIN courses c ON m.course_id = c.id
+    WHERE c.instructor_id = auth.uid()
+  )
+);
+CREATE POLICY "Admins can manage all lessons" ON lessons FOR ALL USING (
+  auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+);
 
-CREATE POLICY "Instructors can manage own courses"
-  ON courses FOR ALL
-  USING (auth.uid() = instructor_id);
+-- ENROLLMENTS
+CREATE POLICY "Users can view own enrollments" ON enrollments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can create own enrollments" ON enrollments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can view all enrollments" ON enrollments FOR SELECT USING (
+  auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+);
 
-CREATE POLICY "Admins can manage all courses"
-  ON courses FOR ALL
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
-
--- MODULES POLICIES
-CREATE POLICY "Anyone can view modules of published courses"
-  ON modules FOR SELECT
-  USING (course_id IN (SELECT id FROM courses WHERE is_published = true));
-
-CREATE POLICY "Instructors can manage own modules"
-  ON modules FOR ALL
-  USING (course_id IN (SELECT id FROM courses WHERE instructor_id = auth.uid()));
-
-CREATE POLICY "Admins can manage all modules"
-  ON modules FOR ALL
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
-
--- LESSONS POLICIES
-CREATE POLICY "Enrolled students can view lessons"
-  ON lessons FOR SELECT
-  USING (
-    module_id IN (SELECT m.id FROM modules m JOIN courses c ON m.course_id = c.id WHERE c.is_published = true)
-    OR
-    module_id IN (SELECT m.id FROM modules m JOIN enrollments e ON m.course_id = e.course_id WHERE e.user_id = auth.uid())
-  );
-
-CREATE POLICY "Instructors can manage own lessons"
-  ON lessons FOR ALL
-  USING (module_id IN (SELECT m.id FROM modules m JOIN courses c ON m.course_id = c.id WHERE c.instructor_id = auth.uid()));
-
-CREATE POLICY "Admins can manage all lessons"
-  ON lessons FOR ALL
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
-
--- ENROLLMENTS POLICIES
-CREATE POLICY "Users can view own enrollments"
-  ON enrollments FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can create own enrollments"
-  ON enrollments FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all enrollments"
-  ON enrollments FOR SELECT
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
-
--- LESSON PROGRESS POLICIES
-CREATE POLICY "Users can view own progress"
-  ON lesson_progress FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own progress"
-  ON lesson_progress FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all progress"
-  ON lesson_progress FOR SELECT
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
+-- LESSON PROGRESS
+CREATE POLICY "Users can view own progress" ON lesson_progress FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own progress" ON lesson_progress FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Admins can view all progress" ON lesson_progress FOR SELECT USING (
+  auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+);
 
 -- ============================================
 -- TRIGGERS
 -- ============================================
 
--- Auto-update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -205,19 +184,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_profiles_updated_at
-  BEFORE UPDATE ON profiles
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER update_courses_updated_at BEFORE UPDATE ON courses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER update_lesson_progress_updated_at BEFORE UPDATE ON lesson_progress
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER update_courses_updated_at
-  BEFORE UPDATE ON courses
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER update_lesson_progress_updated_at
-  BEFORE UPDATE ON lesson_progress
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
--- Auto-create profile on user signup
 CREATE OR REPLACE FUNCTION create_profile_on_signup()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -232,6 +205,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION create_profile_on_signup();
