@@ -31,8 +31,26 @@ export type ProfileRow = {
   phone: string | null;
   target_exam: string | null;
   target_year: number | null;
+  current_device_id: string | null;
+  current_device_label: string | null;
+  device_bound_at: string | null;
+  last_active_at: string | null;
+  device_switch_count: number;
   created_at: string;
   updated_at: string;
+};
+
+export type DeviceAction = "bound" | "rebound" | "evicted" | "released" | "blocked";
+
+export type DeviceSessionRow = {
+  id: string;
+  user_id: string;
+  device_id: string;
+  device_label: string | null;
+  platform: string | null;
+  user_agent: string | null;
+  action: DeviceAction;
+  created_at: string;
 };
 export type CourseRow = {
   id: string;
@@ -200,6 +218,7 @@ export type Database = {
         "user_id" | "title" | "start_time" | "end_time"
       >;
       discount_codes: DefaultedTable<DiscountCodeRow, "code">;
+      device_sessions: DefaultedTable<DeviceSessionRow, "user_id" | "device_id">;
     };
     Views: {
       sales_analytics: { Row: SalesAnalyticsRow; Relationships: [] };
@@ -257,6 +276,27 @@ export type Database = {
       course_effective_price: {
         Args: { p_course_id: string };
         Returns: number;
+      };
+      claim_device: {
+        Args: {
+          p_device_id: string;
+          p_device_label?: string | null;
+          p_platform?: string | null;
+          p_user_agent?: string | null;
+        };
+        Returns: Json;
+      };
+      verify_device: {
+        Args: { p_device_id: string };
+        Returns: Json;
+      };
+      release_device: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      admin_reset_device: {
+        Args: { p_user_id: string };
+        Returns: Json;
       };
     };
     Enums: {

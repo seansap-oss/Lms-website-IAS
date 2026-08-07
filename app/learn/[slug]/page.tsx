@@ -26,6 +26,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { sampleModules, sampleLessons } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/utils";
+import { DynamicWatermark } from "@/components/player/dynamic-watermark";
+import { useStudentProfile } from "@/hooks/use-student-profile";
 import Link from "next/link";
 
 function getContentTypeIcon(contentType: string) {
@@ -56,6 +58,7 @@ function getContentTypeBadge(contentType: string) {
 
 export default function CoursePlayerPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);
+  const { profile } = useStudentProfile();
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [expandedModules, setExpandedModules] = React.useState<string[]>([sampleModules[0].id]);
   const [activeLesson, setActiveLesson] = React.useState({
@@ -201,6 +204,11 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ slug: s
                   <p className="text-white text-lg font-medium">{activeLesson.title}</p>
                   <p className="text-gray-400 text-sm mt-1">Mux HLS Player • {formatDuration(activeLesson.duration_seconds)}</p>
                 </div>
+                <DynamicWatermark
+                  studentName={profile.fullName}
+                  phone={profile.phone}
+                  email={profile.email}
+                />
               </div>
             )}
 
@@ -233,6 +241,12 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ slug: s
                     <span className="text-xs text-purple-300">{formatDuration(activeLesson.duration_seconds)}</span>
                   </div>
                 </div>
+                <DynamicWatermark
+                  studentName={profile.fullName}
+                  phone={profile.phone}
+                  email={profile.email}
+                  tiled={false}
+                />
               </div>
             )}
 

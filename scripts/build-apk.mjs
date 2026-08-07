@@ -72,6 +72,9 @@ ok("Capacitor sync complete");
 log("Configuring Gradle signing");
 run("node scripts/configure-signing.mjs");
 
+// 3c. Re-apply FLAG_SECURE + manifest hardening (survives `cap add android`)
+run("node scripts/configure-security.mjs");
+
 // 4. Gradle assembleDebug
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew";
 const gradlePath = join(ANDROID, process.platform === "win32" ? "gradlew.bat" : "gradlew");

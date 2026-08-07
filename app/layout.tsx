@@ -4,6 +4,8 @@ import "./globals.css";
 import { NativeAppProvider } from "@/components/providers/native-app-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
 import { MobileBottomBar, MobileBottomBarSpacer } from "@/components/navigation/mobile-bottom-bar";
+import { DeviceGuard } from "@/components/security/device-guard";
+import { ScreenCaptureShield } from "@/components/security/screen-capture-shield";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -57,9 +59,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased overscroll-none`}>
         <NativeAppProvider>
-          {children}
-          <MobileBottomBarSpacer />
-          <MobileBottomBar />
+          <DeviceGuard>
+            <ScreenCaptureShield>
+              {children}
+              <MobileBottomBarSpacer />
+              <MobileBottomBar />
+            </ScreenCaptureShield>
+          </DeviceGuard>
         </NativeAppProvider>
         <PwaProvider />
       </body>
