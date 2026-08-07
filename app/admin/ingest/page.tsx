@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { apiFetch } from "@/lib/api-base";
 
 interface QuizQ {
   id: number;
@@ -67,7 +68,7 @@ export default function AdminIngestPage() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch("/api/ai/youtube", {
+      const res = await apiFetch("/api/ai/youtube", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url, generateQuiz: true, quizCount }),
@@ -88,7 +89,7 @@ export default function AdminIngestPage() {
       const form = new FormData();
       form.append("file", pdfFile);
       form.append("count", String(quizCount));
-      const res = await fetch("/api/ai/quiz", { method: "POST", body: form });
+      const res = await apiFetch("/api/ai/quiz", { method: "POST", body: form });
       const json = await res.json();
       setPdfResult({ ...json, quiz: json.quiz });
     } catch {

@@ -6,6 +6,7 @@ import { Activity, CheckCircle2, XCircle, Loader2, RefreshCw, Zap } from "lucide
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { apiFetch } from "@/lib/api-base";
 
 interface ProviderStatus {
   tier: number;
@@ -38,7 +39,7 @@ export default function AIHealthPage() {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/ai/agent");
+      const res = await apiFetch("/api/ai/agent");
       setData(await res.json());
     } finally {
       setLoading(false);
@@ -51,7 +52,7 @@ export default function AIHealthPage() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/ai/agent", {
+      const res = await apiFetch("/api/ai/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ task: "chat", payload: { message: "Reply with exactly: OK" } }),

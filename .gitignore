@@ -39,3 +39,14 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Capacitor / Android
+/android/
+/ios/
+/out/
+/.next-static/
+/.api-stash/
+*.apk
+*.aab
+android/local.properties
+android/.gradle/

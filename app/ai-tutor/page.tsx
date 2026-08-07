@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api-base";
 
 interface Message {
   id: string;
@@ -87,7 +88,7 @@ export default function AITutorPage() {
   }, [messages]);
 
   async function callAgent(task: string, payload: Record<string, unknown>) {
-    const res = await fetch("/api/ai/agent", {
+    const res = await apiFetch("/api/ai/agent", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ task, payload }),
