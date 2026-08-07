@@ -1,5 +1,5 @@
 import { Navbar } from "@/components/landing/navbar";
-import { Hero } from "@/components/landing/hero";
+import { HeroSection } from "@/components/hero/hero-section";
 import { ToppersSection } from "@/components/landing/toppers-section";
 import { CoursesSection } from "@/components/landing/courses-section";
 import { PricingSection } from "@/components/landing/pricing-section";
@@ -11,7 +11,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen">
       <Navbar />
-      <Hero />
+      <HeroSection />
       <ToppersSection />
       <CoursesSection />
       <PricingSection />

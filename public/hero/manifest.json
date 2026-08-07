@@ -1,0 +1,27 @@
+{
+  "generated": "2026-08-07T20:19:43.018Z",
+  "images": [
+    {
+      "slug": "topper-1",
+      "src": "/hero/topper-1.webp",
+      "fallback": "/hero/topper-1.jpg",
+      "width": 1600,
+      "height": 594,
+      "aspect": 2.6923,
+      "orientation": "landscape",
+      "blurDataURL": "data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAACwAwCdASoUAAcAPu1iqU2ppaOiMAgBMB2JYwCdMoR3ADvda32VgAD+6salpJQh/lxVelcGPZ5NwtiHvSaTEjwAAAA=",
+      "source": "t16971a3690e103.png"
+    },
+    {
+      "slug": "topper-2",
+      "src": "/hero/topper-2.webp",
+      "fallback": "/hero/topper-2.jpg",
+      "width": 1600,
+      "height": 594,
+      "aspect": 2.6923,
+      "orientation": "landscape",
+      "blurDataURL": "data:image/webp;base64,UklGRkYAAABXRUJQVlA4IDoAAABwAwCdASoUAAcAPu1iqU2ppaQiMAgBMB2JZQCdADBhp7ArcAAA/usOigVB7E3Yb73Rtwrq/GYGQAAA",
+      "source": "t16971a38719312.png"
+    }
+  ]
+}
